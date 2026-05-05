@@ -61,7 +61,7 @@ function App() {
 
      <div className="name">
      
-     <h4> Made with ♥ by Fairydevmother</h4>
+     <h4> Made with ♥ by Soradearu</h4>
      </div>
     </div>
   );
