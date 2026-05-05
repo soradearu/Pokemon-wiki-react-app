@@ -4,5 +4,3 @@
 **You can find the API here:  **
 https://pokeapi.co/
 
-**See the full deployment here:**
-https://pokemon-wiki-react-app.vercel.app/
