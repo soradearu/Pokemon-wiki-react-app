@@ -1,70 +1,97 @@
-import React,{ useEffect, useState } from "react";
+// src/App.jsx
+
+import { useEffect, useState, useCallback } from "react";
 import PokemonThumbnail from "./Components/PokemonThumbnail";
 
+const API_URL = "https://pokeapi.co/api/v2/pokemon?limit=20";
 
-function App() {
-  const [allPokemons,setAllPokemons] = useState([]);
-  const [loadPoke,setLoadPoke] = useState('https://pokeapi.co/api/v2/pokemon?limit=20');
-  const getAllPokemons = async () =>{
-    const res = await fetch(loadPoke)
-    const data = await res.json()
-    setLoadPoke(data.next)
-   
-    function createPokemonObject(result){
-      result.forEach(async (pokemon) => {
-        const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemon.name}`)
-        const data = await res.json();
-        setAllPokemons(currentList => [...currentList,data])
-      });
+export default function App() {
+  const [pokemons, setPokemons] = useState([]);
+  const [nextUrl, setNextUrl] = useState(API_URL);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchPokemons = useCallback(async () => {
+    if (!nextUrl || loading) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(nextUrl);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch Pokémon list");
+      }
+
+      const data = await response.json();
+
+      setNextUrl(data.next);
+
+      const pokemonDetails = await Promise.all(
+        data.results.map(async (pokemon) => {
+          const response = await fetch(pokemon.url);
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch ${pokemon.name}`);
+          }
+
+          return response.json();
+        })
+      );
+
+      setPokemons((prev) => [...prev, ...pokemonDetails]);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-    createPokemonObject(data.results)
-    await console.log(allPokemons)
-  }
-  useEffect(()=>{
-    getAllPokemons()
-  },[])
+  }, [nextUrl, loading]);
+
+  useEffect(() => {
+    fetchPokemons();
+  }, []);
 
   return (
     <div className="app-container">
-     <h1> 💜 Pokemon Wiki 💜 </h1>
-    
-     <div className="pokemon-container">
-       <div className="all-container">
-          {allPokemons.map((pokemon,index)=> 
-                 <PokemonThumbnail
-                  id = {pokemon.id}
-                  name = {pokemon.name}
-                  image = {pokemon.sprites.other.dream_world.front_default}
-                  type={pokemon.types[0].type.name}
-                  key={index}
-                  height = {pokemon.height}
-                  weight = {pokemon.weight}
-                  stat1 = {pokemon.stats[0].stat.name}
-                  stat2 = {pokemon.stats[1].stat.name}
-                  stat3 = {pokemon.stats[2].stat.name}
-                  stat4 = {pokemon.stats[3].stat.name}
-                  stat5 = {pokemon.stats[4].stat.name}
-                  stat6 = {pokemon.stats[5].stat.name}
-                  bs1 = {pokemon.stats[0].base_stat}
-                  bs2 = {pokemon.stats[1].base_stat}
-                  bs3 = {pokemon.stats[2].base_stat}
-                  bs4 = {pokemon.stats[3].base_stat}
-                  bs5 = {pokemon.stats[4].base_stat}
-                  bs6 = {pokemon.stats[5].base_stat}
-                  
-                 />
-            )}
-       </div>
-       
-       <button className="button-paper" onClick={()=>getAllPokemons()}>More Pokemons</button>
-     </div>
+      <h1>💜 Pokemon Wiki 💜</h1>
 
-     <div className="name">
-     
-     <h4> Made with ♥ by Fairydevmother</h4>
-     </div>
+      {error && <p className="error-message">{error}</p>}
+
+      <div className="pokemon-container">
+        <div className="all-container">
+          {pokemons.map((pokemon) => (
+            <PokemonThumbnail
+              key={pokemon.id}
+              id={pokemon.id}
+              name={pokemon.name}
+              image={
+                pokemon.sprites.other?.dream_world?.front_default ||
+                pokemon.sprites.other?.official-artwork?.front_default ||
+                pokemon.sprites.front_default
+              }
+              type={pokemon.types[0]?.type?.name}
+              height={pokemon.height}
+              weight={pokemon.weight}
+              stats={pokemon.stats}
+            />
+          ))}
+        </div>
+
+        {nextUrl && (
+          <button
+            className="button-paper"
+            onClick={fetchPokemons}
+            disabled={loading}
+          >
+            {loading ? "Loading..." : "More Pokemons"}
+          </button>
+        )}
+      </div>
+
+      <div className="name">
+        <h4>Made with ♥ by Fairydevmother</h4>
+      </div>
     </div>
   );
 }
-
-export default App;
